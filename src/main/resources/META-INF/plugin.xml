@@ -48,7 +48,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="183.2407.10"/>
+    <idea-version since-build="182.5262.2"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -56,7 +56,7 @@
     <depends>com.intellij.modules.lang</depends>
     -->
     <depends>com.intellij.modules.java</depends>
-    <depends optional="true" config-file="">org.intellij.scala</depends>
+    <!--<depends optional="true" config-file="">org.intellij.scala</depends>-->
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
@@ -70,8 +70,10 @@
         <!-- Add your actions here -->
         <group id="com.xiaohansong.codemaker.action.CodeMakerMenu"
                class="com.xiaohansong.codemaker.action.CodeMakerGroup" text="CodeMaker"
-               description="CodeMaker actions" popup="true">
-            <add-to-group group-id="GenerateGroup" anchor="after" relative-to-action="JavaGenerateGroup2"/>
+               description="CodeMaker actions" popup="true" >
+
+
+            <add-to-group group-id="GenerateGroup" anchor="after" relative-to-action="JavaGenerateGroup2" />
         </group>
         <action class="com.xiaohansong.codemaker.action.DocGenerateAction"
                 id="com.xiaohansong.codemaker.action.DocGenerateAction"
@@ -93,6 +95,11 @@
                 text="Generate Code from Api Table">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
+        <!--<action id="CodeMaker.CodeMakerV2" class="com.xiaohansong.codemaker.action.CodeMakerActionV2"-->
+                <!--text="CodeMakerActionV2" description="CodeMakerActionV2">-->
+            <!--<add-to-group group-id="GenerateGroup" anchor="first"/>-->
+            <!--<keyboard-shortcut keymap="$default" first-keystroke="alt O"/>-->
+        <!--</action>-->
     </actions>
 
     <application-components>

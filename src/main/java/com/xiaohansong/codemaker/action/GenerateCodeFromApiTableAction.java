@@ -1,10 +1,5 @@
 package com.xiaohansong.codemaker.action;
 
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -30,6 +25,11 @@ import com.xiaohansong.codemaker.CodeMakerSettings;
 import com.xiaohansong.codemaker.FieldWriteAction;
 import com.xiaohansong.codemaker.util.CodeMakerUtil;
 import com.xiaohansong.codemaker.util.VelocityUtil;
+
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author hansong.xhs
@@ -61,6 +61,7 @@ public class GenerateCodeFromApiTableAction extends AnAction implements DumbAwar
                 .showDumbModeNotification("CodeMaker plugin is not available during indexing");
             return;
         }
+        dumbService.showDumbModeNotification("GenerateCodeFromApiTableAction");
         PsiFile javaFile = e.getData(CommonDataKeys.PSI_FILE);
         Editor editor = e.getData(CommonDataKeys.EDITOR);
         if (javaFile == null || editor == null) {

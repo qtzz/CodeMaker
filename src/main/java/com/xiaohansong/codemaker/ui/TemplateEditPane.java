@@ -97,7 +97,7 @@ public class TemplateEditPane {
         showTestInput.addActionListener(e -> {
             if(!templateEditAndTest.getTestInputShown()) {
                 templateEditAndTest.toggleTestInputPane();
-                showTestInput.setIcon(AllIcons.General.ArrowUp);
+             //   showTestInput.setIcon(AllIcons.General.ArrowUp);
                 editorSplitPane.setEnabled(true);
                 showTestInput.setToolTipText("Hide Test Input");
             } else {

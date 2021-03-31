@@ -6,25 +6,32 @@ import com.intellij.ide.util.TreeClassChooserFactory;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.*;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiImportList;
+import com.intellij.psi.PsiImportStatement;
+import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiNamedElement;
+import com.intellij.psi.PsiParameter;
+import com.intellij.psi.PsiParameterList;
+import com.intellij.psi.SyntheticElement;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.util.PsiUtilBase;
 import com.xiaohansong.codemaker.ClassEntry;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.plugins.scala.lang.psi.api.ScalaFile;
-import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScClassParameter;
-import org.jetbrains.plugins.scala.lang.psi.api.toplevel.imports.ScImportStmt;
-import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScClass;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static scala.collection.JavaConversions.asJavaIterator;
-import static scala.collection.JavaConversions.seqAsJavaList;
 
 /**
  * @author hansong.xhs
@@ -37,13 +44,33 @@ public class CodeMakerUtil {
         return Logger.getInstance(clazz);
     }
 
-    public static PsiClass chooseClass(Project project, PsiClass defaultClass) {
-        TreeClassChooser chooser = TreeClassChooserFactory.getInstance(project)
-            .createProjectScopeChooser("Select a class", defaultClass);
+    public static List<PsiClass> chooseClass(Project project, PsiClass defaultPsiClass) {
 
-        chooser.showDialog();
 
-        return chooser.getSelected();
+        List<PsiClass> psiClassList = Lists.newArrayList(defaultPsiClass);
+        while (true) {
+            TreeClassChooser chooser = TreeClassChooserFactory.getInstance(project)
+                    .createAllProjectScopeChooser("Select a class");
+            chooser.showDialog();
+            PsiClass selected = chooser.getSelected();
+            if (Objects.isNull(selected)) {
+                return psiClassList.stream().distinct().collect(Collectors.toList());
+            }
+            psiClassList.add(selected);
+        }
+    }
+
+
+    @Nullable
+    public static PsiClass getTargetClass(Editor editor, PsiFile file) {
+        int offset = editor.getCaretModel().getOffset();
+        PsiElement element = file.findElementAt(offset);
+        if (element == null) {
+            return null;
+        } else {
+            PsiClass target = PsiTreeUtil.getParentOfType(element, PsiClass.class);
+            return target instanceof SyntheticElement ? null : target;
+        }
     }
 
     public static String getSourcePath(PsiClass clazz) {
@@ -71,23 +98,23 @@ public class CodeMakerUtil {
             return new ArrayList<>();
         }
         return Arrays.stream(importList.getImportStatements())
-            .map(PsiImportStatement::getQualifiedName).collect(Collectors.toList());
+                .map(PsiImportStatement::getQualifiedName).collect(Collectors.toList());
     }
 
-    public static List<String> getScalaImportList(ScalaFile scalaFile) {
-        List<ScImportStmt> scImportStmts = seqAsJavaList(scalaFile.getImportStatements());
-        return scImportStmts.stream()
-            .flatMap(stmt -> seqAsJavaList(stmt.importExprs()).stream().map(PsiElement::getText))
-            .collect(Collectors.toList());
-    }
+    // public static List<String> getScalaImportList(ScalaFile scalaFile) {
+    //     List<ScImportStmt> scImportStmts = seqAsJavaList(scalaFile.getImportStatements());
+    //     return scImportStmts.stream()
+    //             .flatMap(stmt -> seqAsJavaList(stmt.importExprs()).stream().map(PsiElement::getText))
+    //             .collect(Collectors.toList());
+    // }
 
     public static List<ClassEntry.Field> getFields(PsiClass psiClass) {
         return Arrays.stream(psiClass.getFields())
-            .map(psiField -> new ClassEntry.Field(psiField.getType().getPresentableText(),
-                psiField.getName(),
-                psiField.getModifierList() == null ? "" : psiField.getModifierList().getText(),
-                getDocCommentText(psiField)))
-            .collect(Collectors.toList());
+                .map(psiField -> new ClassEntry.Field(psiField.getType().getPresentableText(),
+                        psiField.getName(),
+                        psiField.getModifierList() == null ? "" : psiField.getModifierList().getText(),
+                        getDocCommentText(psiField)))
+                .collect(Collectors.toList());
     }
 
     private static String getDocCommentText(PsiField psiField) {
@@ -103,33 +130,63 @@ public class CodeMakerUtil {
 
     public static List<ClassEntry.Field> getAllFields(PsiClass psiClass) {
         return Arrays.stream(psiClass.getAllFields())
-            .map(psiField -> new ClassEntry.Field(psiField.getType().getPresentableText(),
-                psiField.getName(),
-                psiField.getModifierList() == null ? "" : psiField.getModifierList().getText(),
-                getDocCommentText(psiField)))
-            .collect(Collectors.toList());
+                .map(psiField -> new ClassEntry.Field(psiField.getType().getPresentableText(),
+                        psiField.getName(),
+                        psiField.getModifierList() == null ? "" : psiField.getModifierList().getText(),
+                        getDocCommentText(psiField)))
+                .collect(Collectors.toList());
     }
 
     public static List<ClassEntry.Method> getMethods(PsiClass psiClass) {
         return Arrays.stream(psiClass.getMethods()).map(psiMethod -> {
             String returnType = psiMethod.getReturnType() == null ? ""
                 : psiMethod.getReturnType().getPresentableText();
+            PsiParameterList parameterList = psiMethod.getParameterList();
+            String text = parameterList.getText();
+            @NotNull PsiParameter[] parameters = parameterList.getParameters();
+            //方法参数类型
+            List< String> paramTypes =
+                    Arrays.stream(parameters).map(parameter -> parameter.getType().getPresentableText()).collect(Collectors.toList());
             return new ClassEntry.Method(psiMethod.getName(), psiMethod.getModifierList().getText(),
-                returnType, psiMethod.getParameterList().getText());
+                returnType, psiMethod.getParameterList().getText(),paramTypes,Lists.newArrayList());
         }).collect(Collectors.toList());
     }
 
     public static List<ClassEntry.Method> getAllMethods(PsiClass psiClass) {
         return Arrays.stream(psiClass.getAllMethods()).map(psiMethod -> {
             String returnType = psiMethod.getReturnType() == null ? ""
-                : psiMethod.getReturnType().getPresentableText();
+                    : psiMethod.getReturnType().getPresentableText();
+            PsiParameterList parameterList = psiMethod.getParameterList();
+            String text = parameterList.getText();
+            @NotNull PsiParameter[] parameters = parameterList.getParameters();
+            //方法参数类型
+            List<String> paramTypes =
+                    Arrays.stream(parameters).map(parameter -> parameter.getType().getPresentableText()).collect(Collectors.toList());
+            //方法注解
+            // @NotNull PsiAnnotation[] annotations = psiClass.getAnnotations();
+            // Arrays.stream(annotations).map(psiAnnotation -> {
+            //     ClassEntry.Annotation annotation = new ClassEntry.Annotation();
+            //     annotation.setName(psiAnnotation.getText());
+            //     List<JvmAnnotationAttribute> attributes = psiAnnotation.getAttributes();
+            //     if (CollectionUtils.isNotEmpty(attributes)) {
+            //         Map<@NotNull String, String> collect =
+            //                 attributes.stream().collect(Collectors.toMap(JvmAnnotationAttribute::getAttributeName,
+            //                 e -> e.getAttributeValue().toString(), (f, s) -> s));
+            //         if (MapUtils.isEmpty(collect)) {
+            //             return null;
+            //         }
+            //
+            //     }
+            //     return null;
+            // }).collect(Collectors.toList());
             return new ClassEntry.Method(psiMethod.getName(), psiMethod.getModifierList().getText(),
-                returnType, psiMethod.getParameterList().getText());
+                    returnType, text, paramTypes, Lists.newArrayList());
         }).collect(Collectors.toList());
     }
 
     /**
      * find the method belong to  name
+     *
      * @return null if not found
      */
     public static String findClassNameOfSuperMethod(PsiMethod psiMethod) {
@@ -172,22 +229,22 @@ public class CodeMakerUtil {
         return true;
     }
 
-    public static List<ClassEntry.Field> getScalaClassFields(ScClass scalaClass) {
-        return Lists.newArrayList(asJavaIterator(scalaClass.allVals())).stream()
-            .filter(ts -> ts.namedElement() instanceof ScClassParameter).map(ts -> {
-                ScClassParameter val = (ScClassParameter) ts.namedElement();
-                return new ClassEntry.Field(val.paramType().get().getText(), val.name(),
-                    val.getModifierList().getText(), "");
-            }).collect(Collectors.toList());
-    }
+    // public static List<ClassEntry.Field> getScalaClassFields(ScClass scalaClass) {
+    //     return Lists.newArrayList(asJavaIterator(scalaClass.allVals())).stream()
+    //             .filter(ts -> ts.namedElement() instanceof ScClassParameter).map(ts -> {
+    //                 ScClassParameter val = (ScClassParameter) ts.namedElement();
+    //                 return new ClassEntry.Field(val.paramType().get().getText(), val.name(),
+    //                         val.getModifierList().getText(), "");
+    //             }).collect(Collectors.toList());
+    // }
 
     public static List<String> getClassTypeParameters(PsiClass psiClass) {
         return Arrays.stream(psiClass.getTypeParameters()).map(PsiNamedElement::getName)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
     }
 
     private static List<Character> markdownChars = Lists.newArrayList('<', '>', '`', '*', '_', '{',
-        '}', '[', ']', '(', ')', '#', '+', '-', '.', '!');
+            '}', '[', ']', '(', ')', '#', '+', '-', '.', '!');
 
     public static String escapeMarkdown(String str) {
         StringBuilder result = new StringBuilder();
@@ -222,7 +279,7 @@ public class CodeMakerUtil {
         Editor editor = PsiUtilBase.findEditor(element.getContainingFile());
         if (editor != null) {
             PsiDocumentManager.getInstance(element.getProject())
-                .doPostponedOperationsAndUnblockDocument(editor.getDocument());
+                    .doPostponedOperationsAndUnblockDocument(editor.getDocument());
         }
     }
 
@@ -232,7 +289,7 @@ public class CodeMakerUtil {
             int javadocTextOffset = findJavaDocTextOffset(theElement);
             int javaCodeTextOffset = findJavaCodeTextOffset(theElement);
             codeStyleManager.reformatText(theElement.getContainingFile(), javadocTextOffset,
-                javaCodeTextOffset + 1);
+                    javaCodeTextOffset + 1);
         } catch (Exception e) {
             LOGGER.error("reformat code failed", e);
         }

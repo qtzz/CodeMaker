@@ -31,9 +31,8 @@ import com.xiaohansong.codemaker.ui.Editors;
 import com.xiaohansong.codemaker.util.CodeMakerUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author hansong.xhs
@@ -81,7 +80,7 @@ public class CodeMakerAction extends AnAction implements DumbAware {
 
         PsiClass psiClass = (PsiClass) psiElement;
         String language = psiElement.getLanguage().getID().toLowerCase();
-        List<ClassEntry> selectClasses = getClasses(project, codeTemplate.getClassNumber(), psiClass);
+        List<ClassEntry> selectClasses = getClasses(project, psiClass);
 
         if (selectClasses.size() < 1) {
             Messages.showMessageDialog(project, "No Classes found", "Generate Failed", null);
@@ -91,13 +90,18 @@ public class CodeMakerAction extends AnAction implements DumbAware {
         try {
             ClassEntry currentClass = selectClasses.get(0);
             GeneratedSource generated = generateSource(codeTemplate, selectClasses, currentClass);
-            DestinationChooser.Destination destination = chooseDestination(currentClass, project, psiElement);
-            if (destination instanceof DestinationChooser.FileDestination) {
-                saveToFile(anActionEvent, language, generated.className, generated.content, currentClass, (DestinationChooser.FileDestination) destination, codeTemplate.getFileEncoding());
+            VirtualFile sourceRoot = findSourceRoot(currentClass, project, psiElement);
+            if (showSource(project, codeTemplate.getTargetLanguage(), generated.className, generated.content)) {
+                saveToFile(anActionEvent, language, generated.className, generated.content, currentClass,
+                        sourceRoot, codeTemplate.getFileEncoding());
             }
-            else if(destination == DestinationChooser.ShowSourceDestination) {
-                showSource(project, codeTemplate.getTargetLanguage(), generated.className, generated.content);
-            }
+            // DestinationChooser.Destination destination = chooseDestination(currentClass, project, psiElement);
+            // if (destination instanceof DestinationChooser.FileDestination) {
+            //  saveToFile(anActionEvent, language, generated.className, generated.content, currentClass,
+            //    (DestinationChooser.FileDestination) destination, codeTemplate.getFileEncoding());
+            // } else if (destination == DestinationChooser.ShowSourceDestination) {
+            //     showSource(project, codeTemplate.getTargetLanguage(), generated.className, generated.content);
+            // }
 
         } catch (Exception e) {
             Messages.showMessageDialog(project, e.getMessage(), "Generate Failed", null);
@@ -126,14 +130,32 @@ public class CodeMakerAction extends AnAction implements DumbAware {
         }
     }
 
-    private void showSource(Project project, String language, String className, String content) {
+    private void saveToFile(AnActionEvent anActionEvent, String language, String className, String content,
+                            ClassEntry currentClass, VirtualFile file, String encoding) {
+        final String sourcePath = file.getPath();
+        final String targetPath = CodeMakerUtil.generateClassPath(sourcePath, className, language);
+
+        VirtualFileManager manager = VirtualFileManager.getInstance();
+        VirtualFile virtualFile = manager
+                .refreshAndFindFileByUrl(VfsUtil.pathToUrl(targetPath));
+        //直接覆盖
+        if (virtualFile == null || !virtualFile.exists()) {
+            // async write action
+            ApplicationManager.getApplication().runWriteAction(
+                    new CreateFileAction(targetPath, content, encoding, anActionEvent
+                            .getDataContext()));
+        }
+    }
+
+    private boolean showSource(Project project, String language, String className, String content) {
         final Editor editor = Editors.createSourceEditor(project, language, content, true);
         try {
             final DialogBuilder builder = new DialogBuilder(project);
-            builder.addCloseButton().setText("Close");
+            builder.addCloseButton().setText("Save");
+            builder.addCancelAction().setText("Cancel");
             builder.setCenterPanel(editor.getComponent());
             builder.setTitle(className);
-            builder.show();
+            return builder.showAndGet();
         } finally {
             Editors.release(editor);
         }
@@ -156,17 +178,22 @@ public class CodeMakerAction extends AnAction implements DumbAware {
 
 
     @NotNull
-    private List<ClassEntry> getClasses(Project project, int requiredClassCount, PsiClass currentClass) {
-        List<ClassEntry> selectClasses = new ArrayList<>();
-        selectClasses.add(ClassEntry.create(currentClass));
-        //select the other classes by classChooser
-        for (int i = 1; i < requiredClassCount; i++) {
-            PsiClass psiClass = CodeMakerUtil.chooseClass(project, currentClass);
-            if (psiClass == null) {
-                return Collections.emptyList();
-            }
-            selectClasses.add(ClassEntry.create(psiClass));
+    private List<ClassEntry> getClasses(Project project, PsiClass defaultPsiClass) {
+        List<PsiClass> psiClasses = CodeMakerUtil.chooseClass(project, defaultPsiClass);
+        return psiClasses.stream().map(psiClass -> ClassEntry.create(psiClass)).collect(Collectors.toList());
+    }
+
+    private VirtualFile findSourceRoot(ClassEntry classEntry, Project project, PsiElement psiElement) {
+        String packageName = classEntry.getPackageName();
+        final PackageWrapper targetPackage = new PackageWrapper(PsiManager.getInstance(project), packageName);
+        List<VirtualFile> suitableRoots = JavaProjectRootsUtil.getSuitableDestinationSourceRoots(project);
+        if (suitableRoots.size() > 1) {
+            // return MoveClassesOrPackagesUtil.chooseSourceRoot(targetPackage, suitableRoots,
+            //         psiElement.getContainingFile().getContainingDirectory());
+            return psiElement.getContainingFile().getVirtualFile().getParent();
+        } else if (suitableRoots.size() == 1) {
+            return suitableRoots.get(0);
         }
-        return selectClasses;
+        return null;
     }
 }

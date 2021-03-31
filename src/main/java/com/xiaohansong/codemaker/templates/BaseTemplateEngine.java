@@ -1,23 +1,31 @@
 package com.xiaohansong.codemaker.templates;
 
+import com.google.common.base.CaseFormat;
 import com.xiaohansong.codemaker.ClassEntry;
 import com.xiaohansong.codemaker.CodeTemplate;
 import com.xiaohansong.codemaker.TemplateLanguage;
 import lombok.Data;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 abstract public class BaseTemplateEngine implements TemplateEngine {
 
     abstract protected TemplateLanguage supportedLanguage();
 
     @Override
     public GeneratedSource evaluate(CodeTemplate template, List<ClassEntry> selectClasses, ClassEntry currentClass) {
-        if(template.getTemplateLanguage() != supportedLanguage())
+        if (template.getTemplateLanguage() != supportedLanguage())
             throw new IllegalArgumentException("unsupported language: " + template.getTemplateLanguage());
         final Environment environment = createEnvironment(template, selectClasses, currentClass);
         final String source = doEvaluate(template, environment);
@@ -34,6 +42,7 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
 
         Date now = new Date();
         map.put("class", currentClass);
+        map.put("classList", selectClasses);
         map.put("YEAR", DateFormatUtils.format(now, "yyyy"));
         map.put("TIME", DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
         map.put("USER", System.getProperty("user.name"));
@@ -67,6 +76,7 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
     @Data
     protected static class Environment {
         public final String className;
+
         public final Map<String, Object> bindings;
     }
 
@@ -88,14 +98,22 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
         }
 
         public String quot(String str) {
-            return "\""+ str + "\"";
+            return "\"" + str + "\"";
         }
 
-        public String camelCase(String prefix, String name){
-            if(name == null || name.isEmpty())
+        public String camelCase(String prefix, String name) {
+            if (name == null || name.isEmpty())
                 return name;
             String identifier = scala.removeBackticks(name);
             return scala.removeBackticks(prefix) + identifier.substring(0, 1).toUpperCase() + identifier.substring(1);
+        }
+
+        public String camelToUrl(String camelCase) {
+            if (StringUtils.isBlank(camelCase)) {
+                return "";
+            }
+            String underScore = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, camelCase);
+            return underScore.replaceAll("_", "/");
         }
 
         @Getter
@@ -106,7 +124,7 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
              * backticks are sometimes used in scala identifiers to escape reserved words like `type`, `object`, etc.
              */
             public String removeBackticks(String str) {
-                if(str == null) return str;
+                if (str == null) return str;
                 else return str.replace("`", "");
             }
         }

@@ -1,0 +1,73 @@
+########################################################################################
+##
+## Common variables:
+##  $YEAR - yyyy
+##  $TIME - yyyy-MM-dd HH:mm:ss
+##  $USER - user.name
+##
+## Available variables:
+##  $class0 - the context class
+##  $class1 - the selected class, like $class2, $class2
+##  $ClassName - generate by the config of "Class Name", the generated class name
+##
+## Class Entry Structure:
+##  $class0.className - the class Name
+##  $class0.packageName - the packageName
+##  $class0.importList - the list of imported classes name
+##  $class0.fields - the list of the class fields
+##          - type: the field type
+##          - name: the field name
+##          - modifier: the field modifier, like "private"
+##  $class0.methods - the list of class methods
+##          - name: the method name
+##          - modifier: the method modifier, like "private static"
+##          - returnType: the method returnType
+##          - params: the method params, like "(String name)"
+##  #会造成换行
+########################################################################################
+#macro (cap $strIn)$strIn.valueOf($strIn.charAt(0)).toUpperCase()$strIn.substring(1)#end
+#macro (low $strIn)$strIn.valueOf($strIn.charAt(0)).toLowerCase()$strIn.substring(1)#end
+#set($class0Var = "#low(${class0.ClassName})")
+#macro(camelToUrl $camelCase)$utils.camelToUrl($camelCase)
+#end
+package $class0.PackageName;
+
+#foreach($importer in $class0.ImportList)
+import $importer;
+#end
+
+/**
+*
+* @author ysl
+*/
+@RestController
+@RequestMapping("/api/ktt_gateway/$utils.camelToUrl(${ClassName})/")
+@Slf4j
+@Api
+public class $ClassName {
+
+#foreach($class in $classList)
+    #if($velocityCount!=1)
+    @Autowired
+    private $class.className #low(${class.ClassName});
+    #end
+#end
+
+#foreach($class in $classList)
+
+    #if($velocityCount!=1)
+        #foreach($method in $class.methods)
+            $!br
+        @LoggerOut
+        @ApiOperation("${method.name}")
+        @ResponseBody
+        @RequestMapping(value = "$utils.camelToUrl(${method.name})", method = RequestMethod.POST)
+        public  $method.returnType  $method.name (@RequestBody @Valid $!method.paramsTypes.get(0) request)
+        {
+        return #low(${class.ClassName}).${method.name}(request);
+        }
+        #end
+
+    #end
+#end
+}

@@ -17,8 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-import static com.intellij.refactoring.move.moveClassesOrPackages.MoveClassesOrPackagesUtil.buildDirectoryList;
-
 class DestinationChooser {
 
     static Destination chooseDestination(final PackageWrapper targetPackage,
@@ -28,7 +26,7 @@ class DestinationChooser {
         //ensure that there would be no duplicates: e.g. when one content root is subfolder of another root (configured via excluded roots)
         LinkedHashSet<PsiDirectory> targetDirectories = new LinkedHashSet<>();
         Map<PsiDirectory, String> relativePathsToCreate = new HashMap<>();
-        buildDirectoryList(targetPackage, contentSourceRoots, targetDirectories, relativePathsToCreate);
+       // buildDirectoryList(targetPackage, contentSourceRoots, targetDirectories, relativePathsToCreate);
 
         return chooseDirectory(
                 targetDirectories.toArray(PsiDirectory.EMPTY_ARRAY),
