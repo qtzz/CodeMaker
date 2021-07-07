@@ -29,9 +29,14 @@ import com.xiaohansong.codemaker.templates.PolyglotTemplateEngine;
 import com.xiaohansong.codemaker.templates.TemplateEngine;
 import com.xiaohansong.codemaker.ui.Editors;
 import com.xiaohansong.codemaker.util.CodeMakerUtil;
+import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -90,9 +95,35 @@ public class CodeMakerAction extends AnAction implements DumbAware {
         try {
             ClassEntry currentClass = selectClasses.get(0);
             GeneratedSource generated = generateSource(codeTemplate, selectClasses, currentClass);
+
+
             VirtualFile sourceRoot = findSourceRoot(currentClass, project, psiElement);
-            if (showSource(project, codeTemplate.getTargetLanguage(), generated.className, generated.content)) {
-                saveToFile(anActionEvent, language, generated.className, generated.content, currentClass,
+            final String sourcePath = sourceRoot.getPath();
+            final String targetPath = CodeMakerUtil.generateClassPath(sourcePath, generated.className, language);
+
+            VirtualFileManager manager = VirtualFileManager.getInstance();
+            VirtualFile virtualFile = manager
+                    .refreshAndFindFileByUrl(VfsUtil.pathToUrl(targetPath));
+            //若当前文件已存在则在文末添加新生成的class内容
+            StringBuilder originContentBuilder = new StringBuilder();
+            if (Objects.nonNull(virtualFile) && virtualFile.exists()) {
+                try {
+                    InputStreamReader inputStreamReader = new InputStreamReader(virtualFile.getInputStream());
+                    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                    String line = bufferedReader.readLine();
+                    while (line != null) {
+                        originContentBuilder.append(line);
+                        originContentBuilder.append("\n");
+                        line = bufferedReader.readLine();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            String content = mixOriginAndNew(originContentBuilder.toString(), generated.content);
+
+            if (showSource(project, codeTemplate.getTargetLanguage(), generated.className, content)) {
+                saveToFile(anActionEvent, language, generated.className, content, null,
                         sourceRoot, codeTemplate.getFileEncoding());
             }
             // DestinationChooser.Destination destination = chooseDestination(currentClass, project, psiElement);
@@ -113,39 +144,30 @@ public class CodeMakerAction extends AnAction implements DumbAware {
         return templateEngine.evaluate(codeTemplate, selectClasses, currentClass);
     }
 
-    private void saveToFile(AnActionEvent anActionEvent, String language, String className, String content, ClassEntry currentClass, DestinationChooser.FileDestination destination, String encoding) {
-        final VirtualFile file = destination.getFile();
-        final String sourcePath = file.getPath() + "/" + currentClass.getPackageName().replace(".", "/");
-        final String targetPath = CodeMakerUtil.generateClassPath(sourcePath, className, language);
+    public void saveToFile(AnActionEvent anActionEvent, String language, String className, String content,
+                           String targetPath, VirtualFile file, String encoding) {
+        if (StringUtils.isBlank(targetPath)) {
+            final String sourcePath = file.getPath();
 
-        VirtualFileManager manager = VirtualFileManager.getInstance();
-        VirtualFile virtualFile = manager
-                .refreshAndFindFileByUrl(VfsUtil.pathToUrl(targetPath));
-
-        if (virtualFile == null || !virtualFile.exists() || userConfirmedOverride()) {
-            // async write action
-            ApplicationManager.getApplication().runWriteAction(
-                    new CreateFileAction(targetPath, content, encoding, anActionEvent
-                            .getDataContext()));
+            targetPath = CodeMakerUtil.generateClassPath(sourcePath, className, language);
         }
+        // async write action
+        ApplicationManager.getApplication().runWriteAction(
+                new CreateFileAction(targetPath, content, encoding, anActionEvent
+                        .getDataContext()));
+
     }
 
-    private void saveToFile(AnActionEvent anActionEvent, String language, String className, String content,
-                            ClassEntry currentClass, VirtualFile file, String encoding) {
-        final String sourcePath = file.getPath();
-        final String targetPath = CodeMakerUtil.generateClassPath(sourcePath, className, language);
-
-        VirtualFileManager manager = VirtualFileManager.getInstance();
-        VirtualFile virtualFile = manager
-                .refreshAndFindFileByUrl(VfsUtil.pathToUrl(targetPath));
-        //直接覆盖
-        if (virtualFile == null || !virtualFile.exists()) {
-            // async write action
-            ApplicationManager.getApplication().runWriteAction(
-                    new CreateFileAction(targetPath, content, encoding, anActionEvent
-                            .getDataContext()));
+    public String mixOriginAndNew(String origin, String newStr) {
+        if (StringUtils.isBlank(origin)) {
+            return newStr;
         }
+        int start = newStr.indexOf("{");
+        int end = newStr.lastIndexOf("}");
+        int originEnd = origin.lastIndexOf("}");
+        return origin.substring(0, originEnd) + newStr.substring(start + 1, end + 1);
     }
+
 
     private boolean showSource(Project project, String language, String className, String content) {
         final Editor editor = Editors.createSourceEditor(project, language, content, true);
@@ -178,12 +200,12 @@ public class CodeMakerAction extends AnAction implements DumbAware {
 
 
     @NotNull
-    private List<ClassEntry> getClasses(Project project, PsiClass defaultPsiClass) {
+    public List<ClassEntry> getClasses(Project project, PsiClass defaultPsiClass) {
         List<PsiClass> psiClasses = CodeMakerUtil.chooseClass(project, defaultPsiClass);
         return psiClasses.stream().map(psiClass -> ClassEntry.create(psiClass)).collect(Collectors.toList());
     }
 
-    private VirtualFile findSourceRoot(ClassEntry classEntry, Project project, PsiElement psiElement) {
+    public VirtualFile findSourceRoot(ClassEntry classEntry, Project project, PsiElement psiElement) {
         String packageName = classEntry.getPackageName();
         final PackageWrapper targetPackage = new PackageWrapper(PsiManager.getInstance(project), packageName);
         List<VirtualFile> suitableRoots = JavaProjectRootsUtil.getSuitableDestinationSourceRoots(project);

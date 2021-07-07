@@ -1,0 +1,72 @@
+#macro (cap $strIn)$strIn.valueOf($strIn.charAt(0)).toUpperCase()$strIn.substring(1)#end
+#macro (low $strIn)$strIn.valueOf($strIn.charAt(0)).toLowerCase()$strIn.substring(1)#end
+#set($class0Var = ${class0.ClassName})
+#macro(camelToUrl $camelCase)$utils.camelToUrl($camelCase)
+#end
+package $!{targetClassPath};
+
+#foreach($importer in $class0.ImportList)
+import $importer;
+#end
+import com.dianping.zebra.dao.plugin.page.PageInterceptor;
+import com.dianping.zebra.dao.plugin.page.PageModel;
+import com.google.common.collect.Lists;
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+/**
+*
+* @author ysl
+*/
+@Repository
+public class $ClassName implements ${class0Var}Repository{
+
+@Autowired
+private ${class0Var}Mapper mapper;
+
+@Autowired
+private ${class0Var}MapperExt mapperExt;
+
+
+##mapperExt
+@Override
+public int batchInsertSelective(List<${class0Var}> records){
+
+return mapperExt.batchInsertSelective(records);
+}
+##mapperExt
+@Override
+public int batchInsertOrUpdate(List<${class0Var}> records){
+return mapperExt.batchInsertOrUpdate(records);
+}
+
+
+@Override
+public int insertSelective(${class0Var} record){
+return mapper.insertSelective(record);
+}
+@Override
+public int updateSelectiveByExample(${class0Var} record,${class0Var}Example example){
+return mapper.updateByExampleSelective(record, example);
+}
+
+
+@Override
+public List<${class0Var}> selectByExample(${class0Var}Example example){
+List<${class0Var}> records = mapper.selectByExample(example);
+if (CollectionUtils.isNotEmpty(records)) {
+return records;
+}
+return Lists.newArrayList();
+}
+
+
+@Override
+public List<${class0Var}> selectByExampleAndPage(${class0Var}Example example,PageModel pageModel){
+
+PageInterceptor.startPage(pageModel);
+return selectByExample(example);
+}
+}

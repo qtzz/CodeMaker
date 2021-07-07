@@ -8,7 +8,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
-import com.xiaohansong.codemaker.CodeMakerSettings;
+import com.xiaohansong.codemaker.CodeMakerSettingsGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,16 +19,17 @@ import java.util.List;
  * @author hansong.xhs
  * @version $Id: CodeMakerGroup.java, v 0.1 2017-01-28 9:25 hansong.xhs Exp $$
  */
-public class CodeMakerGroup extends ActionGroup implements DumbAware {
+public class CodeGroupMakerGroup extends ActionGroup implements DumbAware {
 
-    private CodeMakerSettings settings;
 
-    public CodeMakerGroup() {
-        settings = ServiceManager.getService(CodeMakerSettings.class);
+    private CodeMakerSettingsGroup codeMakerSettingsGroup;
+
+    public CodeGroupMakerGroup() {
+        codeMakerSettingsGroup = ServiceManager.getService(CodeMakerSettingsGroup.class);
     }
 
     /**
-     * @see com.intellij.openapi.actionSystem.ActionGroup#getChildren(com.intellij.openapi.actionSystem.AnActionEvent)
+     * @see ActionGroup#getChildren(AnActionEvent)
      */
     @NotNull
     @Override
@@ -40,19 +41,22 @@ public class CodeMakerGroup extends ActionGroup implements DumbAware {
         if (project == null) {
             return AnAction.EMPTY_ARRAY;
         }
+        if (codeMakerSettingsGroup == null) {
+            codeMakerSettingsGroup = new CodeMakerSettingsGroup();
+        }
         final List<AnAction> children = new ArrayList<>();
-        settings.getCodeTemplates().forEach((key, value) -> children.add(getOrCreateAction(key, value.getName())));
+        this.codeMakerSettingsGroup.getCodeTemplateGroups().forEach((k, v) -> children.add(getOrCreateActionV2(k)));
         return children.toArray(new AnAction[children.size()]);
     }
 
-    private AnAction getOrCreateAction(String key, String title) {
+
+    private AnAction getOrCreateActionV2(String key) {
         final String actionId = "CodeGroupMaker.Menu.Action." + key;
         AnAction action = ActionManager.getInstance().getAction(actionId);
         if (action == null) {
-            action = new CodeMakerAction(key);
+            action = new CodeMakerActionGroup(key);
             ActionManager.getInstance().registerAction(actionId, action);
         }
         return action;
     }
-
 }

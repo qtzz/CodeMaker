@@ -1,0 +1,229 @@
+#macro (cap $strIn)$strIn.valueOf($strIn.charAt(0)).toUpperCase()$strIn.substring(1)#end
+#macro (low $strIn)$strIn.valueOf($strIn.charAt(0)).toLowerCase()$strIn.substring(1)#end
+#set($class0Var = ${class0.ClassName})
+#macro(camelToUrl $camelCase)$utils.camelToUrl($camelCase)
+#end
+
+#macro(toSnake $str)$utils.toSnake($str)
+#end
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="$!{targetClassPath}.${class0Var}MapperExt">
+    <resultMap id="BaseResultMap" type="$!{currentClassPath}.${class0Var}">
+
+        #foreach($field in $class0.allFields)
+            #if($field.name.equals("serialVersionUID"))
+            #elseif($field.name.equals("id"))
+                <id column="id" jdbcType="BIGINT" property="id"/>
+            #elseif($field.type.equals("Long"))
+                <result column="$utils.toSnake($field.name)" jdbcType="BIGINT" property="$field.name"/>
+            #elseif($field.type.equals("Integer"))
+                <result column="$utils.toSnake($field.name)" jdbcType="INTEGER" property="$field.name"/>
+            #elseif($field.type.equals("Boolean"))
+                <result column="$utils.toSnake($field.name)" jdbcType="TINYINT" property="$field.name"/>
+            #elseif($field.type.equals("String"))
+                <result column="$utils.toSnake($field.name)" jdbcType="VARCHAR" property="$field.name"/>
+            #elseif($field.type.equals("Date"))
+                <result column="$utils.toSnake($field.name)" jdbcType="TIMESTAMP" property="$field.name"/>
+            #end
+        #end
+    </resultMap>
+    <sql id="Example_Where_Clause">
+        <where>
+            <foreach collection="oredCriteria" item="criteria" separator="or">
+                <if test="criteria.valid">
+                    <trim prefix="(" prefixOverrides="and" suffix=")">
+                        <foreach collection="criteria.criteria" item="criterion">
+                            <choose>
+                                <when test="criterion.noValue">
+                                    and ${criterion.condition}
+                                </when>
+                                <when test="criterion.singleValue">
+                                    and ${criterion.condition} #{criterion.value}
+                                </when>
+                                <when test="criterion.betweenValue">
+                                    and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                                </when>
+                                <when test="criterion.listValue">
+                                    and ${criterion.condition}
+                                    <foreach close=")" collection="criterion.value" item="listItem" open="("
+                                             separator=",">
+                                        #{listItem}
+                                    </foreach>
+                                </when>
+                            </choose>
+                        </foreach>
+                    </trim>
+                </if>
+            </foreach>
+        </where>
+    </sql>
+    <sql id="Update_By_Example_Where_Clause">
+        <where>
+            <foreach collection="example.oredCriteria" item="criteria" separator="or">
+                <if test="criteria.valid">
+                    <trim prefix="(" prefixOverrides="and" suffix=")">
+                        <foreach collection="criteria.criteria" item="criterion">
+                            <choose>
+                                <when test="criterion.noValue">
+                                    and ${criterion.condition}
+                                </when>
+                                <when test="criterion.singleValue">
+                                    and ${criterion.condition} #{criterion.value}
+                                </when>
+                                <when test="criterion.betweenValue">
+                                    and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                                </when>
+                                <when test="criterion.listValue">
+                                    and ${criterion.condition}
+                                    <foreach close=")" collection="criterion.value" item="listItem" open="("
+                                             separator=",">
+                                        #{listItem}
+                                    </foreach>
+                                </when>
+                            </choose>
+                        </foreach>
+                    </trim>
+                </if>
+            </foreach>
+        </where>
+    </sql>
+    <sql id="Base_Column_List">
+        #foreach($field in $class0.allFields)
+            #if($field.name.equals("id")||$field.name.equals("serialVersionUID"))
+            #else
+                $utils.toSnake($field.name) #if($foreach.hasNext),#end
+            #end
+        #end
+    </sql>
+
+    <insert id="batchInsertSelective" parameterType="$!{currentClassPath}.${class0Var}"
+            useGeneratedKeys="true" keyProperty="id">
+        insert into  $utils.toSnake($class0Var) (
+        #foreach($field in $class0.allFields)
+            #if($field.name.equals("id")||$field.name.equals("serialVersionUID"))
+            #else
+                $utils.toSnake($field.name) #if($foreach.hasNext),#end
+            #end
+        #end
+        )
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            <trim prefix="(" suffix=")" suffixOverrides=",">
+
+                #foreach($field in $class0.allFields)
+                    #if($field.name.equals("id")||$field.name.equals("serialVersionUID"))
+                    #elseif($field.type.equals("Long"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=BIGINT},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Integer"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=INTEGER},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Boolean"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=TINYINT},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("String"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=VARCHAR},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Date"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=TIMESTAMP},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #end
+
+                #end
+            </trim>
+        </foreach>
+    </insert>
+
+    <insert id="batchInsertOrUpdate" parameterType="list">
+        insert into $utils.toSnake($class0Var)
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+
+            #foreach($field in $class0.allFields)
+                #if($field.name.equals("id")||$field.name.equals("serialVersionUID"))
+                #else
+                    $utils.toSnake($field.name) #if($foreach.hasNext),#end
+                #end
+            #end
+        </trim>
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            <trim prefix=" (" suffix=")" suffixOverrides=",">
+
+
+                #foreach($field in $class0.allFields)
+                    #if($field.name.equals("id")||$field.name.equals("serialVersionUID"))
+                    #elseif($field.type.equals("Long"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=BIGINT},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Integer"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=INTEGER},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Boolean"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=TINYINT},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("String"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=VARCHAR},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #elseif($field.type.equals("Date"))
+                        <choose>
+                            <when test="item.$field.name != null">
+                                #{item.$field.name,jdbcType=TIMESTAMP},
+                            </when>
+                            <otherwise>default,</otherwise>
+                        </choose>
+                    #end
+
+                #end
+            </trim>
+        </foreach>
+        on duplicate key update
+        <trim prefix=" " suffix=" " suffixOverrides=",">
+            #foreach($field in $class0.allFields)
+                #if($field.name.equals("id")||$field.name.equals("serialVersionUID")||$field.name.equals(
+                    "createdAt"))
+                #else
+                    $utils.toSnake($field.name)=values($utils.toSnake($field.name)),
+                #end
+            #end
+        </trim>
+
+    </insert>
+</mapper>

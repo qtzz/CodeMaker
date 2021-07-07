@@ -32,21 +32,8 @@ public class CodeMakerSettings implements PersistentStateComponent<CodeMakerSett
     private void loadDefaultSettings() {
         try {
             Map<String, CodeTemplate> codeTemplates = new LinkedHashMap<>();
-            codeTemplates.put("Model",
-                    createCodeTemplate("Model",
-                            "Model.vm",
-                            "#set($end = ${class0.className.length()} - 2)${class0.className.substring(0,${end})}", 1, "java"));
-            // codeTemplates.put("Converter",
-            //         createCodeTemplate("Converter", "Converter.vm", "${class0.className}Converter", 2, "java"));
-            // codeTemplates.put("Specs2 Matcher",
-            //         createCodeTemplate("Specs2 Matcher", "specs2-matcher.vm", "${class0.className}Matchers", 1, "scala"));
-            // codeTemplates.put("Specs2 Fluent Matcher",
-            //         createCodeTemplate("Specs2 Fluent Matcher", "specs2-fluent-matcher.vm", "${class0.className}Matchers", 1, "scala"));
-            // codeTemplates.put("FieldComment",
-            //         createCodeTemplate("FieldComment", "FieldComment.vm", "${class0.className}", 1, "java"));
-            codeTemplates.put("Controller", createCodeTemplate("Controller", "Controller.vm", "${class0.className}Controller",
+            codeTemplates.put("Controller", createCodeTemplate("Controller", "Controller.vm", "${class1.className}Controller",
                     3, "java"));
-
             this.codeTemplates = codeTemplates;
         } catch (Exception e) {
             LOGGER.error("loadDefaultSettings failed", e);

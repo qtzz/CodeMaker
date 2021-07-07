@@ -1,0 +1,35 @@
+#macro (cap $strIn)$strIn.valueOf($strIn.charAt(0)).toUpperCase()$strIn.substring(1)#end
+#macro (low $strIn)$strIn.valueOf($strIn.charAt(0)).toLowerCase()$strIn.substring(1)#end
+#set($class0Var = ${class0.ClassName})
+#macro(camelToUrl $camelCase)$utils.camelToUrl($camelCase)
+#end
+#set($class0VarUpper = $class0.ClassName.toUpperCase())
+
+package $!{targetClassPath};
+
+#foreach($importer in $class0.ImportList)
+import $importer;
+#end
+import com.dianping.zebra.dao.plugin.page.PageModel;
+import java.util.List;
+
+/**
+*
+* @author ysl
+*/
+public interface $ClassName {
+
+int batchInsertSelective(List<${class0Var}> records);
+
+int insertSelective(${class0Var} record);
+
+int updateSelectiveByExample(${class0Var} record,${class0Var}Example example);
+
+int batchInsertOrUpdate(List<${class0Var}> records);
+
+List<${class0Var}> selectByExample(${class0Var}Example example);
+
+List<${class0Var}> selectByExampleAndPage(${class0Var}Example example,PageModel pageModel);
+
+
+}

@@ -14,7 +14,33 @@ public class CodeTemplate {
 
     public static final String DEFAULT_ENCODING = "UTF-8";
 
-    public CodeTemplate() {}
+    public CodeTemplate() {
+    }
+
+    public CodeTemplate(String name, String classNameVm, String codeTemplate, int classNumber, String fileEncoding, TemplateLanguage templateLanguage, String targetLanguage) {
+        this.name = name;
+        this.classNameVm = classNameVm;
+        this.codeTemplate = codeTemplate;
+        this.classNumber = classNumber;
+        this.fileEncoding = fileEncoding;
+        this.templateLanguage = templateLanguage;
+        this.targetLanguage = targetLanguage;
+    }
+
+    public CodeTemplate(String name, String classNameVm, String codeTemplate, String assignRelationPath) {
+        this.name = name;
+        this.classNameVm = classNameVm;
+        this.codeTemplate = codeTemplate;
+        this.assignRelationPath = assignRelationPath;
+    }
+
+    public CodeTemplate(String name, String classNameVm, String codeTemplate, String targetLanguage, String assignRelationPath) {
+        this.name = name;
+        this.classNameVm = classNameVm;
+        this.codeTemplate = codeTemplate;
+        this.targetLanguage = targetLanguage;
+        this.assignRelationPath = assignRelationPath;
+    }
 
     /**
      * template name
@@ -34,24 +60,28 @@ public class CodeTemplate {
     /**
      * the number of template context class
      */
-    private int classNumber;
+    private int classNumber = 1;
 
     /**
      * the encoding of the generated file
      */
-    private String fileEncoding;
+    private String fileEncoding = CodeTemplate.DEFAULT_ENCODING;
 
+    private TemplateLanguage templateLanguage = TemplateLanguage.vm;
 
-    private TemplateLanguage templateLanguage;
+    private String targetLanguage = "java";
 
-    private String targetLanguage;
+    /**
+     * assigned path if null ==currentClass path
+     */
+    private String assignRelationPath;
 
     public TemplateLanguage getTemplateLanguage() {
-        return templateLanguage == null? TemplateLanguage.vm : templateLanguage;
+        return templateLanguage == null ? TemplateLanguage.vm : templateLanguage;
     }
 
     public void setTemplateLanguage(TemplateLanguage templateLanguage) {
-        if(templateLanguage == null) {
+        if (templateLanguage == null) {
             templateLanguage = TemplateLanguage.vm;
         }
         this.templateLanguage = templateLanguage;
@@ -63,7 +93,7 @@ public class CodeTemplate {
     }
 
     public static CodeTemplate empty(String title) {
-       return new CodeTemplate(title, "", "", 1, DEFAULT_ENCODING, TemplateLanguage.vm, "java");
+        return new CodeTemplate(title, "", "", 1, DEFAULT_ENCODING, TemplateLanguage.vm, "java");
     }
 
     public String getTargetLanguage() {

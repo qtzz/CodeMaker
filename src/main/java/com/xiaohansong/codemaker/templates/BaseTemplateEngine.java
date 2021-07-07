@@ -7,16 +7,15 @@ import com.xiaohansong.codemaker.TemplateLanguage;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 abstract public class BaseTemplateEngine implements TemplateEngine {
@@ -29,18 +28,31 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
             throw new IllegalArgumentException("unsupported language: " + template.getTemplateLanguage());
         final Environment environment = createEnvironment(template, selectClasses, currentClass);
         final String source = doEvaluate(template, environment);
-        return new GeneratedSource(environment.className, source);
+        return new GeneratedSource(environment.className, source, template);
     }
 
     abstract protected String doEvaluate(CodeTemplate template, Environment environment);
 
     protected Environment createEnvironment(CodeTemplate template, List<ClassEntry> selectClasses, ClassEntry currentClass) {
         Map<String, Object> map = new HashMap<>();
-        for (int i = 0; i < selectClasses.size(); i++) {
-            map.put("class" + i, selectClasses.get(i));
+        if (CollectionUtils.isNotEmpty(selectClasses)) {
+            for (int i = 0; i < selectClasses.size(); i++) {
+                map.put("class" + i, selectClasses.get(i));
+            }
+        } else {
+            map.put("class" + 0, currentClass);
         }
 
+
         Date now = new Date();
+        map.put("currentClassPath", currentClass.getPackageName());
+        String assignRelationPath = template.getAssignRelationPath();
+        if (StringUtils.isNotBlank(assignRelationPath)) {
+            assignRelationPath = assignRelationPath.substring(assignRelationPath.indexOf("com"));
+            assignRelationPath = assignRelationPath.replaceAll("\\/", "\\.");
+            map.put("targetClassPath", assignRelationPath);
+        }
+
         map.put("class", currentClass);
         map.put("classList", selectClasses);
         map.put("YEAR", DateFormatUtils.format(now, "yyyy"));
@@ -81,25 +93,7 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
     }
 
     public static class Utils {
-        public String mkString(Collection<?> list, String delimiter, String prefix, String suffix) {
-            if (list.isEmpty())
-                return "";
-            else
-                return list.stream()
-                        .map(Object::toString)
-                        .collect(Collectors.joining(delimiter, prefix, suffix));
-        }
 
-        public String delim(Collection<?> list, int velocityCount, String delim) {
-            if (velocityCount < list.size())
-                return delim;
-            else
-                return "";
-        }
-
-        public String quot(String str) {
-            return "\"" + str + "\"";
-        }
 
         public String camelCase(String prefix, String name) {
             if (name == null || name.isEmpty())
@@ -112,8 +106,15 @@ abstract public class BaseTemplateEngine implements TemplateEngine {
             if (StringUtils.isBlank(camelCase)) {
                 return "";
             }
-            String underScore = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, camelCase);
+            String underScore = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, camelCase.toUpperCase());
             return underScore.replaceAll("_", "/");
+        }
+
+        public String toSnake(String str) {
+            if (StringUtils.isBlank(str)) {
+                return "";
+            }
+            return CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str);
         }
 
         @Getter

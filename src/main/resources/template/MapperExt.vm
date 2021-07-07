@@ -1,0 +1,24 @@
+#macro (cap $strIn)$strIn.valueOf($strIn.charAt(0)).toUpperCase()$strIn.substring(1)#end
+#macro (low $strIn)$strIn.valueOf($strIn.charAt(0)).toLowerCase()$strIn.substring(1)#end
+#set($class0Var = ${class0.ClassName})
+#macro(camelToUrl $camelCase)$utils.camelToUrl($camelCase)
+#end
+package $!{targetClassPath};
+
+#foreach($importer in $class0.ImportList)
+import $importer;
+#end
+import java.util.List;
+
+
+/**
+*
+* @author ysl
+*/
+public interface $ClassName {
+
+int batchInsertSelective(List<${class0Var}> records);
+
+int batchInsertOrUpdate(List<${class0Var}> records);
+
+}
